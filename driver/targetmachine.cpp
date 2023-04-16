@@ -161,11 +161,7 @@ const char *getABI(const llvm::Triple &triple, const llvm::SmallVectorImpl<llvm:
   case llvm::Triple::ppc64le:
     return "elfv2";
   case llvm::Triple::riscv64:
-    if (isFeatureEnabled(features, "d"))
-      return "lp64d";
-    if (isFeatureEnabled(features, "f"))
-      return "lp64f";
-    return "lp64";
+    return "lp64d";
   case llvm::Triple::riscv32:
     return "ilp32";
 #if LDC_LLVM_VER >= 1600
