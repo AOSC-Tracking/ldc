@@ -45,6 +45,8 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <llvm/IR/Constant.h>
+#include <llvm/Analysis/ConstantFolding.h>
 #include <stack>
 
 llvm::cl::opt<llvm::GlobalVariable::ThreadLocalMode> clThreadModel(
@@ -1139,7 +1141,6 @@ LLConstant *DtoConstExpInit(const Loc &loc, Type *targetType, Expression *exp) {
 
   LLType *llType = val->getType();
   LLType *targetLLType = DtoMemType(baseTargetType);
-
   // shortcut for zeros
   if (val->isNullValue())
     return llvm::Constant::getNullValue(targetLLType);
@@ -1147,7 +1148,11 @@ LLConstant *DtoConstExpInit(const Loc &loc, Type *targetType, Expression *exp) {
   // extend i1 to i8
   if (llType->isIntegerTy(1)) {
     llType = LLType::getInt8Ty(gIR->context());
+#if LDC_LLVM_VER < 1800
     val = llvm::ConstantExpr::getZExt(val, llType);
+#else
+    val = llvm::ConstantFoldCastOperand(llvm::Instruction::ZExt, val, llType, *gDataLayout);
+#endif
   }
 
   if (llType == targetLLType)
@@ -1211,7 +1216,11 @@ LLConstant *DtoConstExpInit(const Loc &loc, Type *targetType, Expression *exp) {
            "On initializer integer type mismatch, the target should be wider "
            "than the source.");
 
+#if LDC_LLVM_VER < 1800
     return llvm::ConstantExpr::getZExtOrBitCast(val, target);
+#else
+    return llvm::ConstantFoldCastOperand(llvm::Instruction::ZExt, val, target, *gDataLayout);
+#endif
   }
 
   Logger::println("Unhandled type mismatch, giving up.");
